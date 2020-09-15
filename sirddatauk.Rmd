@@ -1,5 +1,5 @@
 ---
-title: "Paramter estimation with death data before lockdown"
+title: "Paramter estimation with uk death data before lockdown"
 output: html_notebook
 ---
 
@@ -14,26 +14,22 @@ library(ggplot2)
 day_n <- "2020-03-23"
 url <- "https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/owid-covid-data.csv"
 data <- read.csv(url, header = TRUE)
-data <- subset(data, location=="United Kingdom"  & date>="2020-03-14" & date<=day_n, select = -c(iso_code, continent, stringency_index, population_density:life_expectancy, new_tests:tests_units)) #display only relavent columns and the UK data only, 
-#allowing for approx 1 week delay in reporting, starting analysis from day when first case was reported.
-#omitting the most recent data since the government now have a new recording systme in plcae for the total deaths
+data <- subset(data, location=="United Kingdom"  & date>="2020-03-14" & date<=day_n, select = -c(iso_code, continent, stringency_index, population_density:life_expectancy, new_tests:tests_units)) #display only relevant columns and the UK data only, 
+#stating the analysis from the day 10 cumulative deaths are reported, up until the date of UK lockdown order
 data
 ```
 ```{r}
 library(lubridate)
-#starting the day for the first recorded cases in the UK, so t0 = 31/1/20
 day1 <- as.Date("2020-03-14")
 dayn <- as.Date(day_n)
 
 Day <- 1:as.integer(ymd(dayn) + 1 - ymd(day1))
 Deaths <- data$new_deaths
-cases <- data$total_cases
-newcases <- data$new_cases
+
 
 ggplot(data) +
     geom_point(aes(Day, Deaths),colour = 'purple', size = 0.5) 
-  #geom_line(aes(Day, cases), colour = 'blue')+
-#geom_point(aes(Day, newcases), colour = 'green')
+
 ```
 ```{r}
 library(rstan)
@@ -46,13 +42,10 @@ options (mc.cores = parallel::detectCores ())
 cl <- parallel::makeCluster(3, setup_strategy = "sequential")
 if (Sys.getenv("RSTUDIO") == "1" && !nzchar(Sys.getenv("RSTUDIO_TERM")) && 
     Sys.info()["sysname"] == "Darwin" && getRversion() == "4.0.0") {
-    parallel:::setDefaultClusterOptions(setup_strategy = "sequential")}
+    parallel:::setDefaultClusterOptions(setup_strategy = "sequential")} #for chains to run in parallel
 set.seed(3) # for reproductibility
 
 deaths <- Deaths
-# deaths <- as.integer(deaths)
-newdeaths <- as.integer(deaths)
-
 
 N <- 66650000
 
@@ -63,7 +56,7 @@ t0 = 0
 t <- t[-1]
 
 #initial conditions
-i0 <- 2
+i0 <- 2 
 s0 <- N - i0
 r0 <- 0
 d0 <- 0
@@ -78,7 +71,6 @@ model <- stan_model("sirdstancovid.stan")
 ```
 
 ```{r}
-model <- stan_model("sirdstancovid.stan")
 test <- sampling(model,
                 data = data_sir,
                 iter = 200,
@@ -99,11 +91,11 @@ library(rstanarm)
 pars=c('beta','gamma','sigma', "R0", "recovery_time","phi")
 print(fit_sir_negbinUK, pars = pars, digits = 5)
 plot(stan_dens(fit_sir_negbinUK, pars = pars, separate_chains = TRUE), point_est = "mean") 
-# beta <- extract(fit_sir_negbin, "beta")$beta
-# hist(beta)
-plot(fit_sir_negbinUK,pars = pars)
-# plot(fit_sir_negbin,pars = c("beta","gamma","sigma"), show_density = TRUE, ci_level = 0.95, fill_color = "purple")
+#plot the density of each parameter output
 plot(fit_sir_negbinUK, plotfun = "trace", pars = pars, inc_warmup = FALSE)
+#plot of each mcmc chain to see convergence and mixing
+plot(fit_sir_negbinUK,pars = pars)
+#plot of the spread of each parameter
 ```
 
 ```{r}
@@ -124,14 +116,7 @@ breaks = c("black", "red", "grey"),
 labels = c("Median Fit", "Data Points"," 95% CI"),
 guide = "legend")+
   theme(legend.position = "bottom")
-```
-```{r}
-library(bayesplot)
-library(ggplot2)
-library(rstanarm)
-posterior <- as.array(fit_sir_negbin)
-color_scheme_set("red")
-mcmc_intervals(posterior, pars = pars)
+  #plot showing the actual obsevered data against the estmated graph using the bayesian estimates
 ```
 
 
