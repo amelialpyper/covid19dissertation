@@ -56,7 +56,6 @@ transformed parameters{
 }
 
 model {
-//real lambda[n_days];
   
   //priors
   beta ~ lognormal(log(0.4),0.5);
@@ -65,31 +64,13 @@ model {
   
   phi_inv ~ normal(0,5);
   
-  // //likelihood
-  // for (i in 1:n_days){
-  //   lambda[i] = y[i,4]*N;
-  //  }
-  // //
-  // //sampling distribution
-  // //col(matrix x, int n) - The n-th column of matrix x. Here the number of infected people
-  // 
-  // newdeaths ~ poisson(lambda);
-  
  newdeaths ~ neg_binomial(col(to_matrix(y), 4), phi);
  
 }
 generated quantities {
-  //real lambda[n_days];
   real R0 = beta / (gamma + sigma);
   real recovery_time = 1 / gamma;
   real pred_newdeaths[n_days];
-  
-  //  for (i in 1:n_days){
-  //    lambda[i] = y[i,2]*N;
-  //  }
-  // 
-  // pred_newdeaths = poisson_rng(lambda);
-  pred_newdeaths = neg_binomial_rng(col(to_matrix(y), 4), phi);
 
-  
+  pred_newdeaths = neg_binomial_rng(col(to_matrix(y), 4), phi);  
 }
