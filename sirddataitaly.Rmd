@@ -11,23 +11,28 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(readr)
 library(ggplot2)
-day_n <- "2020-03-23"
+day_n <- "2020-03-11"
 url <- "https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/owid-covid-data.csv"
 data <- read.csv(url, header = TRUE)
-data <- subset(data, location=="United Kingdom"  & date>="2020-03-14" & date<=day_n, select = -c(iso_code, continent, stringency_index, population_density:life_expectancy, new_tests:tests_units)) #display only relevant columns and the UK data only, 
+data <- subset(data, location=="Italy"  & date>="2020-02-26" & date<=day_n, select = -c(iso_code, continent, stringency_index, population_density:life_expectancy, new_tests:tests_units)) #display only relavent columns and the Italy data only, 
+#starting from the date when 10 cumulative deaths were reported
 data
 ```
 ```{r}
 library(lubridate)
-day1 <- as.Date("2020-03-14")
+#starting the day for the first recorded cases in the UK, so t0 = 31/1/20
+day1 <- as.Date("2020-02-26")
 dayn <- as.Date(day_n)
 
 Day <- 1:as.integer(ymd(dayn) + 1 - ymd(day1))
 Deaths <- data$new_deaths
+cases <- data$total_cases
+newcases <- data$new_cases
 
 ggplot(data) +
     geom_point(aes(Day, Deaths),colour = 'purple', size = 0.5) 
-#plot of new deaths from the first 10 deaths recorded to the start of uk lockdown
+  #geom_line(aes(Day, cases), colour = 'blue')+
+#geom_point(aes(Day, newcases), colour = 'green')
 ```
 ```{r}
 library(rstan)
@@ -44,6 +49,8 @@ if (Sys.getenv("RSTUDIO") == "1" && !nzchar(Sys.getenv("RSTUDIO_TERM")) &&
 set.seed(3) # for reproductibility
 
 deaths <- Deaths
+# deaths <- as.integer(deaths)
+newdeaths <- as.integer(deaths)
 
 
 N <- 66650000
@@ -79,9 +86,7 @@ test <- sampling(model,
                 control = list(adapt_delta = 0.999, max_treedepth = 15))
 ```
 ```{r}
-set.seed(3)
-model <- stan_model("sirdstancovid.stan")
-fit_sir_negbinUK <- sampling(model,
+fit_sir_negbin <- sampling(model,
                 data = data_sir,
                 iter = 3000,
                 chains = 3,
@@ -91,15 +96,16 @@ fit_sir_negbinUK <- sampling(model,
 ```{r}
 library(rstanarm)
 pars=c('beta','gamma','sigma', "R0", "recovery_time","phi")
-print(fit_sir_negbinUK, pars = pars, digits = 5)
-plot(stan_dens(fit_sir_negbinUK, pars = c('beta','gamma','sigma', "R0"), separate_chains = TRUE))
-plot(fit_sir_negbinUK,pars = pars)
-plot(fit_sir_negbinUK, plotfun = "trace", pars = pars, inc_warmup = FALSE)
-mcmc_acf(fit_sir_negbinUK, pars = pars)
+print(fit_sir_negbin, pars = pars, digits = 5)
+plot(stan_dens(fit_sir_negbin, pars = c('beta','gamma','sigma', "R0"), separate_chains = TRUE), point_est = "mean") 
+plot(fit_sir_negbin,pars = pars)
+plot(fit_sir_negbin, plotfun = "trace", pars = pars, inc_warmup = FALSE)
+mcmc_acf(fit_sir_negbin, pars = pars)
 ```
+
 ```{r}
  smr_pred <- cbind(as.data.frame(summary(
-  fit_sir_negbinUK, pars = "pred_newdeaths", probs = c(0.025, 0.5, 0.975))$summary), t, deaths)
+  fit_sir_negbin, pars = "pred_newdeaths", probs = c(0.025, 0.5, 0.975))$summary), t, deaths)
 smr_pred
 colnames(smr_pred) <- make.names(colnames(smr_pred))
 
@@ -107,12 +113,22 @@ ggplot(smr_pred, mapping = aes(x = t)) +
  geom_ribbon(aes(ymin = X2.5., ymax = X97.5., colour = "grey"), fill = "grey", alpha = 0.6) + 
  geom_line(mapping = aes(x = t, y = X50., colour = "black")) +
 geom_point(mapping = aes(y = Deaths, colour = "red"), size = 0.5) +
-  labs(x = "Days Since 10 Cumulative Deaths Recorded", y = "New Deaths") +
+  labs(x = "Day", y = "Deaths") +
+  #scale_colour_manual(name='', values=c("orange" = "orange", "black" = "black", "red" = "red"))+
+  # scale_fill_manual("",values="orange")+
   scale_color_identity(name = "",
 breaks = c("black", "red", "grey"),
 labels = c("Median Fit", "Data Points"," 95% CI"),
 guide = "legend")+
   theme(legend.position = "bottom")
+```
+```{r}
+library(bayesplot)
+library(ggplot2)
+library(rstanarm)
+posterior <- as.array(fit_sir_negbin)
+color_scheme_set("red")
+mcmc_intervals(posterior, pars = pars)
 ```
 
 

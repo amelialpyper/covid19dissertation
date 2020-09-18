@@ -1,0 +1,155 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+```{r}
+library(tidyverse)
+library(readr)
+library(ggplot2)
+day_n <- "2020-04-01"
+url <- "https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/owid-covid-data.csv"
+data <- read.csv(url, header = TRUE)
+data <- subset(data, location=="United Kingdom"  & date>="2020-03-01" & date<=day_n, select = -c(iso_code, continent, stringency_index, population_density:life_expectancy, new_tests:tests_units)) #display only relavent columns and the UK data only, 
+#allowing for approx 1 week delay in reporting, starting analysis from day when first case was reported.
+#omitting the most recent data since the government now have a new recording systme in plcae for the total deaths
+data
+
+library(lubridate)
+#starting the day for the first recorded cases in the UK, so t0 = 31/1/20
+day1 <- as.Date("2020-03-01")
+dayn <- as.Date(day_n)
+ 
+Day <- 1:as.integer(ymd(dayn) + 1 - ymd(day1))
+Deaths <- data$new_deaths
+cases <- data$total_cases
+newcases <- data$new_cases
+
+ggplot(data) +
+    geom_point(aes(Day, Deaths),colour = 'purple', size = 0.5) 
+  #geom_line(aes(Day, cases), colour = 'blue')+
+#geom_point(aes(Day, newcases), colour = 'green')
+```
+
+```{r}
+library(deSolve)
+sird <- function(t,x,parms){
+    S <- x[1]
+    I <- x[2]
+    R <- x[3]
+    D <- x[4]
+
+    
+  with(as.list(parms),
+{
+    dS <- -beta*S*I/N
+    dI <- beta*S*I/N - nu*I - theta*I
+    dR <- nu*I
+    dD <- theta*I
+    res <- c(dS,dI,dR,dD)
+  list(res)
+})
+}
+```
+
+```{r}
+
+require(bbmle)
+#  create likelihood function
+ #average recovery time for covid for mild cases
+
+sirdpois <- function(lbeta,lnu, ltheta, logN, logI0) {
+    parms <- c(beta=plogis(lbeta), nu=plogis(lnu), theta=plogis(ltheta))
+    x0 <- c(S=exp(logN), I=exp(logI0), R=0, D = 0)
+    out <- ode(y=x0, Day, sird, parms)
+    SD <- sqrt(sum( (Deaths-out[,5])^2)/length(Day))
+    -sum(dpois(Deaths, lambda=out[,5], log=TRUE))
+ 
+}
+
+sirdnbin <- function(lbeta,lnu, ltheta, logN, logI0) {
+    parms <- c(beta=plogis(lbeta), nu=plogis(lnu), theta=plogis(ltheta))
+    x0 <- c(S=exp(logN), I=exp(logI0), R=0, D = 0)
+    out <- ode(y=x0, Day, sird, parms)
+    SD <- sqrt(sum( (Deaths-out[,5])^2)/length(Day))
+    -sum(dnbinom(Deaths, mu=out[,5], size=SD, log=TRUE))
+
+}
+
+# minimize negative-log-likelihood
+
+N <- 66650000
+#66649998
+fit1 <- mle(sirdpois,
+            start=list(lbeta=qlogis(0.3),
+                       lnu=qlogis(0.07),
+                ltheta = qlogis(0.04),
+                logN=log(N), logI0=log(1)),
+            method="Nelder-Mead",
+            control=list(maxit=1E5,trace=0))
+
+
+
+fit2 <- mle(sirdnbin,
+            start=list(lbeta=qlogis(0.3),
+                       lnu=qlogis(0.07),
+                ltheta = qlogis(0.04),
+                
+                logN=log(N), logI0=log(1)),
+            method="Nelder-Mead",
+            control=list(maxit=1E5,trace=0))
+
+           
+
+
+
+options(scipen=999)
+pars=c('beta','nu','theta', "N", "I0")
+
+
+summary(fit1)
+theta1 <- as.numeric(c(plogis(coef(fit1)[1:3]),
+                  exp(coef(fit1)[4:5])) )
+theta1  <- round(theta1, digits = 6)
+setNames(theta1, pars)
+R01 <- theta1[1]/(theta1[2] + theta1[3])
+R01
+summary(fit2)
+theta2 <- as.numeric(c(plogis(coef(fit2)[1:3]),
+                  exp(coef(fit2)[4:5])) )
+theta2  <- round(theta2, digits = 6)
+setNames(theta2, pars)
+R02 <- theta2[1]/(theta2[2] + theta2[3])
+R02
+
+```
+normal fit gives the closest estimation to the uks R0 number before lockdown, when using the death data above. The same fit using cases data suggests an R0 of almost 1/2, could possibly be due to under reporting, asymptomatic cases etc etc 
+```{r}
+library(ggplot2)
+parms <- c(beta=theta1[1], nu = theta1[2], theta = theta1[3])
+times <- seq(00,32,0.1)
+#setting initial values
+x0 <- c(theta1[4],theta1[5],0,0)
+stateMatrix1 <- ode(y=x0, times, sird, parms) #matrix to hold the output
+colnames(stateMatrix1) <- c("time","S","I","R", "D")
+stateMatrix1 <- as.data.frame(stateMatrix1)
+
+parms <- c(beta=theta2[1], nu = theta2[2], theta = theta2[3])
+#setting initial values
+x0 <- c(theta2[4],theta2[5],0,0)
+stateMatrix2 <- ode(y=x0, times, sird, parms) #matrix to hold the output
+colnames(stateMatrix2) <- c("time","S","I","R", "D")
+stateMatrix2 <- as.data.frame(stateMatrix2)
+
+ggplot() + geom_line(data = stateMatrix1, aes(x = time, y = D, colour = "black"),linetype = 2) +
+  geom_line(data = stateMatrix2, aes(x = time, y = D, colour = "purple"),linetype = 2)+
+  geom_line(data = data, aes(Day, Deaths, colour = "red"),size = 0.5) +
+  labs(
+    y = "New Deaths",
+    x = "Days since 01/03/20"
+  )+
+scale_color_identity(name = "Key",
+breaks = c("black", "purple", "red"),
+labels = c("Poisson Fit","Neg Bin Fit","Data"),
+guide = "legend")+
+  theme(legend.position = "bottom")
+```
