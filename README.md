@@ -10,3 +10,5 @@ intervention. This is done via bayesian inference
 
 
 MLE refers to maximum likelihood estimation and this uses uk data to estimate the parameters mentioned above using MLE to compare with bayesian inference.
+
+All models were coded in R 
