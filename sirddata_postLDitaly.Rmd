@@ -1,0 +1,120 @@
+---
+title: "Paramter estimation with death data before lockdown"
+output: html_notebook
+---
+
+```{r}
+rm(list=ls())
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+library(tidyverse)
+library(readr)
+library(ggplot2)
+day_n <- "2020-06-04" #end of italy lockdown
+url <- "https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/owid-covid-data.csv"
+data <- read.csv(url, header = TRUE)
+data <- subset(data, location=="Italy"  & date>="2020-03-19" & date<=day_n, select = -c(iso_code, continent, stringency_index, population_density:life_expectancy, new_tests:tests_units)) #display only relevant columns and the italy data only, allowing for the 2-3 weeks for interventions to take effect. 2 weeks past the start of the Italy lockdown to allow for any delays between reduced transmission having an effect on mortality.
+data
+```
+```{r}
+library(lubridate)
+day1 <- as.Date("2020-03-19")
+dayn <- as.Date(day_n)
+
+Day <- 1:as.integer(ymd(dayn) + 1 - ymd(day1))
+Deaths <- data$new_deaths
+
+ggplot(data) +
+    geom_line(aes(Day, Deaths),colour = 'purple', size = 0.5) 
+#plot of new deaths from 2 weeks past the start of uk lockdown
+```
+```{r}
+library(rstan)
+library(gridExtra)
+library(parallel)
+library(deSolve)
+library(dplyr)
+rstan_options (auto_write = TRUE)
+options (mc.cores = parallel::detectCores ())
+cl <- parallel::makeCluster(3, setup_strategy = "sequential")
+if (Sys.getenv("RSTUDIO") == "1" && !nzchar(Sys.getenv("RSTUDIO_TERM")) && 
+    Sys.info()["sysname"] == "Darwin" && getRversion() == "4.0.0") {
+    parallel:::setDefaultClusterOptions(setup_strategy = "sequential")}
+set.seed(3) # for reproductibility
+
+deaths <- Deaths
+
+
+
+N <- 60461826 #population of italy
+
+# times
+n_days <- length(deaths) 
+t <- seq(0, n_days, by = 1)
+t0 = 0 
+t <- t[-1]
+
+#initial conditions
+i0 <- 35713 #total number of cases on the start date
+s0 <- N - i0
+r0 <- 0
+d0 <- 2978 #total number of deaths on the start date
+
+y0 = c(S = s0, I = i0, R = r0, D=d0)
+
+# data for Stan
+data_sir <- list(n_days = n_days, y0 = y0, t0 = t0, ts = t, N = N, newcases = deaths)
+
+
+model <- stan_model("sirdstancovid_postLD.stan")
+```
+
+```{r}
+test <- sampling(model,
+                data = data_sir,
+                iter = 200,
+                chains = 2,
+                cores = 1,
+                control = list(adapt_delta = 0.999, max_treedepth = 15))
+```
+```{r}
+fit_sir_negbinLD <- sampling(model,
+                data = data_sir,
+                iter = 3000,
+                chains = 3,
+                cores = 3,
+                control = list(max_treedepth = 15, adapt_delta = 0.99))
+```
+```{r}
+#show the parameter estimates along with the posterior density plots and the MCMC chains to obsever how well the chains have mixed.
+pars=c('beta','gamma','sigma', "R0", "recovery_time", "phi")
+print(fit_sir_negbinLD, pars = pars, digits = 5)
+stan_dens(fit_sir_negbinLD, pars = c('beta','gamma','sigma', "R0"), separate_chains = TRUE)
+plot(fit_sir_negbinLD, plotfun = "trace", pars = pars, inc_warmup = FALSE)
+```
+
+```{r}
+#posterior predictive check, how well did our model estimate the data curve.
+smr_pred <- cbind(as.data.frame(summary(
+  fit_sir_negbinLD, pars = "pred_newcases", probs = c(0.025, 0.5, 0.975))$summary), t, deaths)
+smr_pred
+colnames(smr_pred) <- make.names(colnames(smr_pred))
+
+ggplot(smr_pred, mapping = aes(x = t)) +
+ geom_ribbon(aes(ymin = X2.5., ymax = X97.5., colour = "grey"), fill = "grey", alpha = 0.6) + 
+ geom_line(mapping = aes(x = t, y = X50., colour = "black")) +
+geom_point(mapping = aes(y = Deaths, colour = "red"), size = 0.5) +
+  labs(x = "Day", y = "Deaths") +
+  scale_color_identity(name = "",
+breaks = c("black", "red", "grey"),
+labels = c("Median Fit", "Data Points"," 95% CI"),
+guide = "legend")+
+  theme(legend.position = "bottom") 
+```
+
+
+
+
+
+
