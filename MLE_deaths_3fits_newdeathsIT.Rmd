@@ -108,7 +108,7 @@ R01 <- theta1[1]/(theta1[2] + theta1[3])
 R01
 summary(fit2)
 theta2 <- as.numeric(c(plogis(coef(fit2)[1:4])))
-pars=c('beta','gamma','sigma','lphi')                 
+pars=c('beta','gamma','sigma','phi')                 
 theta2  <- round(theta2, digits = 6)
 setNames(theta2, pars)
 R02 <- theta2[1]/(theta2[2] + theta2[3])
