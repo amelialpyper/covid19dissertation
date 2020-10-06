@@ -61,13 +61,13 @@ model {
   //priors
   beta ~ lognormal(log(0.25),0.5);
   gamma ~ lognormal(log(0.1428),0.5);
-  //sigma ~ lognormal(log(0.001),0.9); //UK
-  sigma ~ lognormal(log(0.001),0.45); //Italy
+  sigma ~ lognormal(log(0.001),0.9); //UK
+  //sigma ~ lognormal(log(0.001),0.45); //Italy
   
 phi_inv ~ normal(0,5); 
 //sampling distribution
 //col(matrix x, int n) - The n-th column of matrix x. Here the number of dead people
-newdeaths ~ neg_binomial(col(to_matrix(y), 4), phi); 
+newdeaths ~ neg_binomial_2(col(to_matrix(y), 4), phi); 
  
 }
 generated quantities {
@@ -75,6 +75,6 @@ generated quantities {
   real recovery_time = 1 / gamma; 
   real pred_newdeaths[n_days];
 
-  pred_newdeaths = neg_binomial_rng(col(to_matrix(y), 4), phi); // predicted new deaths estimate for the posterior predictive check.
+  pred_newdeaths = neg_binomial_2_rng(col(to_matrix(y), 4), phi); // predicted new deaths estimate for the posterior predictive check.
 
 }
