@@ -67,7 +67,7 @@ d0 <- 7545 #total number of deaths on the start date
 y0 = c(S = s0, I = i0, R = r0, D=d0)
 
 # data for Stan
-data_sir <- list(n_days = n_days, y0 = y0, t0 = t0, ts = t, N = N, newcases = deathsLD)
+data_sir <- list(n_days = n_days, y0 = y0, t0 = t0, ts = t, N = N, newdeaths = deathsLD)
 
 
 model <- stan_model("sirdstancovid_postLD.stan")
@@ -100,9 +100,9 @@ plot(fit_sir_negbinUKLD1, plotfun = "trace", pars = pars, inc_warmup = FALSE)
 ```
 
 ```{r}
-#posterior predictive check, how well did our model estimate the data curve.
+#posterior predictive check, how well did our model estimate the data curve. Curve was not estimated too well, perhaps because we are looking at daily new deaths which the deterministic model does, when plotting it is cumulative.
 smr_pred <- cbind(as.data.frame(summary(
-  fit_sir_negbinUKLD1, pars = "pred_newcases", probs = c(0.025, 0.5, 0.975))$summary), t, deathsLD)
+  fit_sir_negbinUKLD1, pars = "pred_newdeaths", probs = c(0.025, 0.5, 0.975))$summary), t, deathsLD)
 smr_pred
 colnames(smr_pred) <- make.names(colnames(smr_pred))
 
