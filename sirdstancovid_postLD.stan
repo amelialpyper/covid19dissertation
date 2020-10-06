@@ -28,7 +28,7 @@ data {
   real t0; //initial time point
   real ts[n_days]; //time points observed
   int<lower=1> N; //population
-  int<lower=0> newcases[n_days];
+  int<lower=0> newdeaths[n_days];
 }
 transformed data {
   real x_r[0];//real variables used to evaluate the function, which only depend on fixed data
@@ -71,9 +71,9 @@ model {
 generated quantities {
   real R0 = beta / (gamma + sigma); //equation used to calculate R0, equation ()
   real recovery_time = 1 / gamma;
-  real pred_newcases[n_days];
+  real pred_newdeaths[n_days];
   
-  pred_newcases = neg_binomial_2_rng(col(to_matrix(y), 4), phi); // predicted new deaths estimate for the posterior predictive check.
+  pred_newdeaths = neg_binomial_2_rng(col(to_matrix(y), 4), phi); // predicted new deaths estimate for the posterior predictive check.
 
   
 }
