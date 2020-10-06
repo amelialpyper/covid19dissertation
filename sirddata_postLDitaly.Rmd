@@ -1,5 +1,5 @@
 ---
-title: "Paramter estimation with death data before lockdown"
+title: "Paramter estimation with death data post lockdown"
 output: html_notebook
 ---
 
@@ -58,7 +58,7 @@ t <- t[-1]
 #initial conditions
 i0 <- 35713 #total number of cases on the start date
 s0 <- N - i0
-r0 <- 30
+r0 <- 1000
 d0 <- 2978 #total number of deaths on the start date
 
 y0 = c(S = s0, I = i0, R = r0, D=d0)
