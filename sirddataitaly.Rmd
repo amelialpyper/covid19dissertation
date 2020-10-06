@@ -56,7 +56,7 @@ t <- t[-1]
 #initial conditions
 i0 <- 322 #no of total cases on 26/02
 s0 <- N - i0
-r0 <- 0
+r0 <- 30
 d0 <- 11 #no of total deaths on 26/02
 
 y0 = c(S = s0, I = i0, R = r0, D=d0)
@@ -69,7 +69,6 @@ model <- stan_model("sirdstancovid.stan")
 ```
 
 ```{r}
-model <- stan_model("sirdstancovid.stan")
 test <- sampling(model,
                 data = data_sir,
                 iter = 200,
@@ -114,13 +113,6 @@ labels = c("Median Fit", "Data Points"," 95% CI"),
 guide = "legend")+
   theme(legend.position = "bottom")
 ```
-```{r}
-library(bayesplot)
-library(ggplot2)
-library(rstanarm)
-posterior <- as.array(fit_sir_negbin)
-color_scheme_set("red")
-mcmc_intervals(posterior, pars = pars)
-```
+
 
 
