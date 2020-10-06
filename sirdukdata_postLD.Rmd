@@ -1,5 +1,5 @@
 ---
-title: "Paramter estimation with death data before lockdown"
+title: "Paramter estimation with death data post lockdown"
 output: html_notebook
 ---
 
@@ -61,7 +61,7 @@ t <- t[-1]
 #initial conditions
 i0 <- 66054 #total no of cases on start date
 s0 <- N - i0
-r0 <- 0 
+r0 <- 1000 
 d0 <- 7545 #total number of deaths on the start date
 
 y0 = c(S = s0, I = i0, R = r0, D=d0)
@@ -82,8 +82,6 @@ test <- sampling(model,
                 control = list(adapt_delta = 0.999, max_treedepth = 15))
 ```
 ```{r}
-set.seed(3)
-model <- stan_model("sirdstancovid_postLD.stan")
 fit_sir_negbinUKLD1 <- sampling(model,
                 data = data_sir,
                 iter = 3000,
