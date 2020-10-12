@@ -23,7 +23,7 @@ day1 <- as.Date("2020-03-19")
 dayn <- as.Date(day_n)
 
 Day <- 1:as.integer(ymd(dayn) + 1 - ymd(day1))
-Deaths <- data$new_deaths
+Deaths <- data$total_deaths
 
 ggplot(data) +
     geom_line(aes(Day, Deaths),colour = 'purple', size = 0.5) 
