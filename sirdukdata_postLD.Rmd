@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(readr)
 library(ggplot2)
-day_n <- "2020-06-04"
+day_n <- "2020-08-04"
 url <- "https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/owid-covid-data.csv"
 data <- read.csv(url, header = TRUE)
 dataLD <- subset(data, location=="United Kingdom"  & date>="2020-04-08" & date<=day_n, select = -c(iso_code, continent, stringency_index, population_density:life_expectancy, new_tests:tests_units)) #display only relevant columns and the UK data only, allowing for the 2-3 weeks for interventions to take effect. 2 weeks past the start of the UK lockdown to allow for any delays between reduced transmission having an effect on mortality.
@@ -25,7 +25,7 @@ day1 <- as.Date("2020-04-08")
 dayn <- as.Date(day_n)
 
 Day <- 1:as.integer(ymd(dayn) + 1 - ymd(day1))
-DeathsLD <- dataLD$new_deaths
+DeathsLD <- dataLD$total_deaths
 
 
 ggplot(dataLD) +
@@ -61,7 +61,7 @@ t <- t[-1]
 #initial conditions
 i0 <- 66054 #total no of cases on start date
 s0 <- N - i0
-r0 <- 1000 
+r0 <- 66054 -7545  
 d0 <- 7545 #total number of deaths on the start date
 
 y0 = c(S = s0, I = i0, R = r0, D=d0)
@@ -98,17 +98,18 @@ plot(fit_sir_negbinUKLD1, plotfun = "trace", pars = pars, inc_warmup = FALSE)
 ```
 
 ```{r}
-#posterior predictive check, how well did our model estimate the data curve. Curve was not estimated too well, perhaps because we are looking at daily new deaths which the deterministic model does, when plotting it is cumulative.
-smr_pred <- cbind(as.data.frame(summary(
-  fit_sir_negbinUKLD1, pars = "pred_newdeaths", probs = c(0.025, 0.5, 0.975))$summary), t, deathsLD)
-smr_pred
-colnames(smr_pred) <- make.names(colnames(smr_pred))
+#posterior predictive check, how well did our model estimate the data curve.
 
-ggplot(smr_pred, mapping = aes(x = t)) +
+post_pred <- cbind(as.data.frame(summary(
+  fit_sir_negbinUKLD1, pars = "pred_newdeaths", probs = c(0.025, 0.5, 0.975))$summary), t, deathsLD)
+post_pred
+colnames(post_pred) <- make.names(colnames(post_pred))
+
+ggplot(post_pred, mapping = aes(x = t)) +
  geom_ribbon(aes(ymin = X2.5., ymax = X97.5., colour = "grey"), fill = "grey", alpha = 0.6) + 
  geom_line(mapping = aes(x = t, y = X50., colour = "black")) +
 geom_point(mapping = aes(y = DeathsLD, colour = "red"), size = 0.5) +
-  labs(x = "Day Since Lockdown was Introduced", y = "New Deaths") +
+  labs(x = "Days Since Lockdown was Introduced, allowing for a 2 week delay, 08/04/20 ", y = "Total Deaths") +
   scale_color_identity(name = "",
 breaks = c("black", "red", "grey"),
 labels = c("Median Fit", "Data Points"," 95% CI"),
