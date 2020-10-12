@@ -21,13 +21,12 @@ dayn <- as.Date(day_n)
 Day_it <- 1:as.integer(ymd(dayn) + 1 - ymd(day1))
 
 Deathsmleit <- datamleit$total_deaths
-
-
 ggplot(datamleit) +
+  geom_point(aes(Day_it, Deathsmleit),colour = 'purple', size = 0.5)
 ```
 
 ```{r}
-#defining our SIRD model to be solved in the mle functions, equation ()
+#defining our SIRD model to be solved in the mle functions, equation (2)
 library(deSolve)
 sird <- function(t,x,parms){
     S <- x[1]
@@ -51,7 +50,7 @@ sird <- function(t,x,parms){
 ```{r}
 
 require(bbmle)
-#  create negative likelihood functions for negbin and poisson distributions. The poisson distribution is given in equation () and the negative binomial function in given in equation (). 
+#  create negative likelihood functions for negbin and poisson distributions. The poisson distribution is given in equation (3-5) and the negative binomial function in given in equation (6-8). 
 
 sirdpois <- function(lbeta,lgamma, lsigma) {
     parms <- c(beta=plogis(lbeta), gamma=plogis(lgamma), sigma=plogis(lsigma))
@@ -70,7 +69,7 @@ sirdnbin <- function(lbeta,lgamma, lsigma) {
 
 }
 
-# minimize negative-log-likelihood using the initial parameters given in Table () in report
+# minimize negative-log-likelihood using the initial parameters given in Table (2) in report
 
 N <- 60461826
 
@@ -97,7 +96,7 @@ fit2 <- mle(sirdnbin,
 options(scipen=999)
 pars=c('beta','gamma','sigma')
 
-#taking the exponential of each of the output will give us the paramater estimate we need from each distribution. Using these paramater estimates, we use eqaution () to calculate the R0 number.
+#taking the exponential of each of the output will give us the paramater estimate we need from each distribution. Using these paramater estimates, we use eqaution (43) to calculate the R0 number.
 summary(fit1)
 theta1 <- as.numeric(c(plogis(coef(fit1)[1:3])))
                   
@@ -115,7 +114,7 @@ R02
 
 ```
 ```{r}
-#plotting the estimated output against our observed data points, output shown in figures () and () in report.
+#plotting the estimated output against our observed data points
 library(ggplot2)
 parms <- c(beta=theta1[1], gamma = theta1[2], sigma = theta1[3])
 times <- seq(0,22,0.1)
