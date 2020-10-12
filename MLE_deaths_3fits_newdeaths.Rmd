@@ -27,7 +27,7 @@ ggplot(datamle) +
 ```
 
 ```{r}
-#defining our SIRD model to be solved in the mle functions, equation ()
+#defining our SIRD model to be solved in the mle functions, equation (2)
 library(deSolve)
 sird <- function(t,x,parms){
     S <- x[1]
