@@ -51,7 +51,7 @@ sird <- function(t,x,parms){
 ```{r}
 
 require(bbmle)
-#  create negative likelihood functions for negbin and poisson distributions. The poisson distribution is given in equation () and the negatuve binomial function in given in equation ().
+#  create negative likelihood functions for negbin and poisson distributions. The poisson distribution is given in equation (3-5) and the negatuve binomial function in given in equation (6-8).
 
 sirdpois <- function(lbeta,lgamma, lsigma) {
     parms <- c(beta=plogis(lbeta), gamma=plogis(lgamma), sigma=plogis(lsigma))
@@ -70,7 +70,7 @@ sirdnbin <- function(lbeta,lgamma, lsigma) {
 
 }
 
-# minimize negative-log-likelihood using the initial parameters given in Table () in report
+# minimize negative-log-likelihood using the initial parameters given in Table (2) in report
 
 N <- 66650000
 
@@ -91,7 +91,7 @@ fit2 <- mle(sirdnbin,
             control=list(maxit=1E5,trace=0))
 
            
-#taking the exponential of each of the output will give us the paramater estimate we need from each distribution. Using these paramater estimates, we use eqaution () to calculate the R0 number.
+#taking the exponential of each of the output will give us the paramater estimate we need from each distribution. Using these paramater estimates, we use eqaution (43) to calculate the R0 number.
 
 options(scipen=999)
 pars=c('beta','gamma','sigma')
@@ -114,7 +114,7 @@ R02
 
 ```
 ```{r}
-#plotting the estimated output against our observed data points, output shown in figures () and () in report.
+#plotting the estimated output against our observed data points
 library(ggplot2)
 parms <- c(beta=theta1[1], gamma = theta1[2], sigma = theta1[3])
 times <- seq(0,25,0.1)
