@@ -23,7 +23,7 @@ day1 <- as.Date("2020-03-14")
 dayn <- as.Date(day_n)
 
 Day <- 1:as.integer(ymd(dayn) + 1 - ymd(day1))
-Deaths <- data$new_deaths
+Deaths <- data$total_deaths
 
 ggplot(data) +
     geom_point(aes(Day, Deaths),colour = 'purple', size = 0.5) 
@@ -57,7 +57,7 @@ t <- t[-1]
 #initial conditions
 i0 <- 1766 #no of total cases on 14/03
 s0 <- N - i0
-r0 <- 30
+r0 <- 1500
 d0 <- 10 # no of total deaths on 14/03
 
 y0 = c(S = s0, I = i0, R = r0, D=d0)
@@ -97,16 +97,16 @@ plot(fit_sir_negbinUK, plotfun = "trace", pars = pars, inc_warmup = FALSE)
 ```
 ```{r}
 #posterior predictive check, how well did our model estimate the data curve.
- smr_pred <- cbind(as.data.frame(summary(
+ post_pred <- cbind(as.data.frame(summary(
   fit_sir_negbinUK, pars = "pred_newdeaths", probs = c(0.025, 0.5, 0.975))$summary), t, deaths)
-smr_pred
-colnames(smr_pred) <- make.names(colnames(smr_pred))
+post_pred
+colnames(post_pred) <- make.names(colnames(post_pred))
 
-ggplot(smr_pred, mapping = aes(x = t)) +
+ggplot(post_pred, mapping = aes(x = t)) +
  geom_ribbon(aes(ymin = X2.5., ymax = X97.5., colour = "grey"), fill = "grey", alpha = 0.6) + 
  geom_line(mapping = aes(x = t, y = X50., colour = "black")) +
 geom_point(mapping = aes(y = Deaths, colour = "red"), size = 0.5) +
-  labs(x = "Days Since 10 Cumulative Deaths Recorded", y = "New Deaths") +
+  labs(x = "Days Since 10 Cumulative Deaths Recorded, 14/03/20", y = "Total Deaths") +
   scale_color_identity(name = "",
 breaks = c("black", "red", "grey"),
 labels = c("Median Fit", "Data Points"," 95% CI"),
