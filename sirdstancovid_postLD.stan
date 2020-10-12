@@ -19,7 +19,7 @@ functions {
       real dD_dt =  sigma * I ;
     
       
-      return {dS_dt, dI_dt, dR_dt, dD_dt}; //define our SIRD model for stan, equation ()
+      return {dS_dt, dI_dt, dR_dt, dD_dt}; //define our SIRD model for stan, equation (2)
   }
 }
 data {
@@ -65,11 +65,11 @@ model {
   phi_inv ~ normal(0,5);
   //sampling distribution
 //col(matrix x, int n) - The n-th column of matrix x. Here the number of dead people
- newcases ~ neg_binomial_2(col(to_matrix(y), 4), phi);
+ newcases ~ neg_binomial_2(col(to_matrix(y), 4), phi); //equation (6)
  
 }
 generated quantities {
-  real R0 = beta / (gamma + sigma); //equation used to calculate R0, equation ()
+  real R0 = beta / (gamma + sigma); //equation used to calculate R0, equation (43)
   real recovery_time = 1 / gamma;
   real pred_newdeaths[n_days];
   
