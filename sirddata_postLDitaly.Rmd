@@ -101,7 +101,7 @@ post_pred <- cbind(as.data.frame(summary(
 post_pred
 colnames(post_pred) <- make.names(colnames(post_pred))
 
-ggplot(smr_pred, mapping = aes(x = t)) +
+ggplot(post_pred, mapping = aes(x = t)) +
  geom_ribbon(aes(ymin = X2.5., ymax = X97.5., colour = "grey"), fill = "grey", alpha = 0.6) + 
  geom_line(mapping = aes(x = t, y = X50., colour = "black")) +
 geom_point(mapping = aes(y = Deaths, colour = "red"), size = 0.5) +
